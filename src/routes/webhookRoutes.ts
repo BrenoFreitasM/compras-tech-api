@@ -1,5 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { MessageModel } from '../models/MessageModel';
+import { ProductModel } from '../models/ProductModel';
+import { extractProductsFromText } from '../services/productExtractor';
 
 const router = Router();
 
@@ -43,8 +45,30 @@ router.post('/evolution', async (req: Request, res: Response) => {
           // rawPayload: payload
         });
         console.log(`✅ Mensagem de ${remoteJid} salva no banco com sucesso!`);
+
+        // Extração de produtos a partir do texto
+        if (text) {
+          console.log(`⏳ Extraindo catálogo de produtos usando IA...`);
+          const produtos = await extractProductsFromText(text);
+          if (produtos.length > 0) {
+            console.log(`✅ Extração concluída! Foram encontrados ${produtos.length} produtos.`);
+            
+            // Salva cada produto extraído no banco
+            for (const prod of produtos) {
+              await ProductModel.create({
+                ...prod,
+                remoteJid: remoteJid,
+                messageId: messageData.key?.id || 'SEM_ID',
+                timestamp: new Date((messageData.messageTimestamp || Date.now() / 1000) * 1000),
+              });
+            }
+            console.log(`✅ Produtos de ${remoteJid} salvos no banco com sucesso!`);
+          } else {
+            console.log(`Nenhum produto encontrado no texto de ${remoteJid}.`);
+          }
+        }
       } catch (dbError) {
-        console.error(`❌ Erro ao salvar mensagem no MongoDB:`, dbError);
+        console.error(`❌ Erro ao salvar mensagem ou produtos no MongoDB:`, dbError);
       }
     }
 
