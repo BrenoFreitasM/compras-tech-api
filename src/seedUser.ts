@@ -13,7 +13,7 @@ async function seedUser() {
     console.log('📦 Conectado ao MongoDB para Seed!');
 
     const email = 'admin@veiggi.com'; // Altere se desejar
-    const password = 'admin'; // Senha padrão
+    const password = 'Neymar@1'; // Senha padrão
     const name = 'Admin Veiggi';
 
     const existingUser = await UserModel.findOne({ email });
