@@ -45,6 +45,7 @@ const prompt = ChatPromptTemplate.fromMessages([
 Sua tarefa é encontrar e catalogar todos os produtos listados no texto fornecido.
 O texto pode conter iPhones, MacBooks, Apple Watches, Câmeras e Acessórios.
 Extraia as informações detalhadas sobre a categoria, modelo, versão, capacidade de armazenamento, cor, saúde da bateria, preço e outras observações de cada item.
+Se o texto indicar que se trata de produtos "Seminovos" (por exemplo, no cabeçalho ou título) ou se o item apresentar indícios de uso prévio, inclua a tag "Seminovo" no campo de observações, junto de outras notas que possam existir.
 Siga estritamente as propriedades disponíveis no esquema.`
   ],
   ["human", "Texto de entrada:\n{texto}"]

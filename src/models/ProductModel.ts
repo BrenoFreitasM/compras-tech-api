@@ -12,6 +12,7 @@ export interface IProduct extends Document {
   remoteJid: string; // Para saber de qual número veio o produto
   messageId: string; // Referência da mensagem
   timestamp: Date;
+  active: boolean; // Indica se o produto está ativo (é do dia de hoje)
 }
 
 const ProductSchema = new Schema<IProduct>({
@@ -26,6 +27,7 @@ const ProductSchema = new Schema<IProduct>({
   remoteJid: { type: String, required: true },
   messageId: { type: String, required: true },
   timestamp: { type: Date, default: Date.now },
+  active: { type: Boolean, default: true },
 });
 
 export const ProductModel = mongoose.model<IProduct>('Product', ProductSchema);

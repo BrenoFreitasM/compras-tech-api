@@ -47,25 +47,47 @@ router.post('/evolution', async (req: Request, res: Response) => {
         console.log(`✅ Mensagem de ${remoteJid} salva no banco com sucesso!`);
 
         // Extração de produtos a partir do texto
-        if (text) {
-          console.log(`⏳ Extraindo catálogo de produtos usando IA...`);
+        // Para economizar tokens, verificamos se o texto parece conter uma lista de produtos
+        const pareceCatalogo = /(R\$|iphone|macbook|apple watch|ipad|oferta|seminovo|produtos)/i.test(text);
+
+        if (text && pareceCatalogo) {
+          console.log(`\n🤖 [IA ACIONADA] O texto de ${remoteJid} parece um catálogo. Enviando para análise (consumirá tokens OpenAI)...`);
           const produtos = await extractProductsFromText(text);
           if (produtos.length > 0) {
             console.log(`✅ Extração concluída! Foram encontrados ${produtos.length} produtos.`);
             
-            // Salva cada produto extraído no banco
+            // Desativa produtos antigos deste fornecedor
+            const startOfToday = new Date();
+            startOfToday.setHours(0, 0, 0, 0);
+
+            const desativados = await ProductModel.updateMany(
+              {
+                remoteJid: remoteJid,
+                timestamp: { $lt: startOfToday },
+                active: true
+              },
+              {
+                $set: { active: false }
+              }
+            );
+            console.log(`🧹 ${desativados.modifiedCount} produtos antigos de ${remoteJid} foram desativados.`);
+
+            // Salva cada produto novo extraído no banco
             for (const prod of produtos) {
               await ProductModel.create({
                 ...prod,
                 remoteJid: remoteJid,
                 messageId: messageData.key?.id || 'SEM_ID',
                 timestamp: new Date((messageData.messageTimestamp || Date.now() / 1000) * 1000),
+                active: true
               });
             }
             console.log(`✅ Produtos de ${remoteJid} salvos no banco com sucesso!`);
           } else {
             console.log(`Nenhum produto encontrado no texto de ${remoteJid}.`);
           }
+        } else if (text) {
+          console.log(`⏭️  [IA IGNORADA] O texto não parece um catálogo. A IA não foi acionada para economizar tokens.`);
         }
       } catch (dbError) {
         console.error(`❌ Erro ao salvar mensagem ou produtos no MongoDB:`, dbError);
