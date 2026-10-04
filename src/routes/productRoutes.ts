@@ -52,13 +52,24 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
       }
     }
 
+    const page = parseInt(queryParams.page as string, 10) || 1;
+    const limit = parseInt(queryParams.limit as string, 10) || 20;
+    const skip = (page - 1) * limit;
+
+    const totalCount = await ProductModel.countDocuments(filter);
+
     const products = await ProductModel.find(filter)
       .populate('categoryId')
-      .sort({ timestamp: -1 });
+      .sort({ timestamp: -1 })
+      .skip(skip)
+      .limit(limit);
 
     res.status(200).json({
       success: true,
       count: products.length,
+      totalCount,
+      totalPages: Math.ceil(totalCount / limit),
+      currentPage: page,
       data: products
     });
   } catch (error) {

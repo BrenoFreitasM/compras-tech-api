@@ -189,6 +189,22 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Número da página (padrão: 1)",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Quantidade de itens por página (padrão: 20)",
+            "schema": {
+              "type": "integer"
+            }
           }
         ],
         "responses": {
@@ -265,6 +281,18 @@
                           }
                         }
                       }
+                    },
+                    "totalCount": {
+                      "type": "integer",
+                      "example": 100
+                    },
+                    "totalPages": {
+                      "type": "integer",
+                      "example": 5
+                    },
+                    "currentPage": {
+                      "type": "integer",
+                      "example": 1
                     }
                   }
                 }
