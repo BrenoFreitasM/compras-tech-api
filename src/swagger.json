@@ -85,6 +85,164 @@
           }
         }
       }
+    },
+    "/products": {
+      "get": {
+        "summary": "Lista produtos extraídos",
+        "description": "Retorna os produtos salvos no banco de dados. Permite filtragem dinâmica por qualquer campo.",
+        "tags": [
+          "Products"
+        ],
+        "parameters": [
+          {
+            "name": "categoria",
+            "in": "query",
+            "description": "Filtra por categoria (ex: Smartphone, Smartwatch)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "modelo",
+            "in": "query",
+            "description": "Filtra por modelo (ex: iPhone 13)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "versao",
+            "in": "query",
+            "description": "Filtra por versão",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "armazenamento",
+            "in": "query",
+            "description": "Filtra por armazenamento",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cor",
+            "in": "query",
+            "description": "Filtra por cor",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "saude_bateria",
+            "in": "query",
+            "description": "Filtra por saúde da bateria",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "preco",
+            "in": "query",
+            "description": "Filtra por preço",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "observacoes",
+            "in": "query",
+            "description": "Filtra por observações (ex: Seminovo)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "remoteJid",
+            "in": "query",
+            "description": "Filtra pelo número do fornecedor",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "active",
+            "in": "query",
+            "description": "Filtra apenas os ativos (true) ou inativos (false)",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de produtos retornada com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "count": {
+                      "type": "integer",
+                      "example": 10
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "categoria": {
+                            "type": "string"
+                          },
+                          "modelo": {
+                            "type": "string"
+                          },
+                          "versao": {
+                            "type": "string"
+                          },
+                          "armazenamento": {
+                            "type": "string"
+                          },
+                          "cor": {
+                            "type": "string"
+                          },
+                          "saude_bateria": {
+                            "type": "string"
+                          },
+                          "preco": {
+                            "type": "string"
+                          },
+                          "observacoes": {
+                            "type": "string"
+                          },
+                          "remoteJid": {
+                            "type": "string"
+                          },
+                          "active": {
+                            "type": "boolean"
+                          },
+                          "timestamp": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro interno"
+          }
+        }
+      }
     }
   }
 }

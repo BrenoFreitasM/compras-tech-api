@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import swaggerUi from 'swagger-ui-express';
 import * as swaggerDocument from './swagger.json';
 import webhookRoutes from './routes/webhookRoutes';
+import productRoutes from './routes/productRoutes';
 
 dotenv.config();
 
@@ -15,6 +16,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Registra as rotas
 app.use('/webhook', webhookRoutes);
+app.use('/products', productRoutes);
 
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI as string;
