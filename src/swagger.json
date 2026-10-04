@@ -420,6 +420,27 @@
           }
         ]
       }
+    },
+    "/auth/logout": {
+      "post": {
+        "summary": "Logout de usuário (encerra sessão ativa)",
+        "tags": [
+          "Auth"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "401": {
+            "description": "Não autorizado"
+          }
+        }
+      }
     }
   },
   "components": {

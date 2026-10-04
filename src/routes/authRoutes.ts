@@ -1,8 +1,8 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { UserModel } from '../models/UserModel';
-
 import { authMiddleware } from '../middleware/authMiddleware';
 
 const router = Router();
@@ -24,8 +24,13 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    // Gerar novo ID de sessão e salvar no banco (invalida as antigas)
+    const sessionId = crypto.randomUUID();
+    user.activeSessionId = sessionId;
+    await user.save();
+
     const token = jwt.sign(
-      { userId: user._id, email: user.email },
+      { userId: user._id, email: user.email, sessionId },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -42,6 +47,18 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
   } catch (error) {
     console.error('Erro no login:', error);
     res.status(500).json({ success: false, error: 'Erro interno ao realizar login' });
+  }
+});
+
+router.post('/logout', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userPayload = (req as any).user;
+    await UserModel.findByIdAndUpdate(userPayload.userId, { activeSessionId: null });
+    
+    res.json({ success: true, message: 'Logout realizado com sucesso. Sessão encerrada.' });
+  } catch (error) {
+    console.error('Erro no logout:', error);
+    res.status(500).json({ success: false, error: 'Erro interno ao realizar logout' });
   }
 });
 
