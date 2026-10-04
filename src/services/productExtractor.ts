@@ -44,7 +44,7 @@ Regras rigorosas para a extração:
 2. Características adicionais (armazenamento, cor, condição) NÃO devem ir no campo "modelo", e sim em seus respectivos campos.
 3. Preencha o campo "condicao" da seguinte forma:
    - "Novo": Se o texto mencionar "lacrado", "CPO" ou "novo".
-   - "Seminovo": Se o texto mencionar "vitrine", "swap", "grade", etc, ou se estiver implícito pelo estado de uso.
+   - "Seminovo": Se o texto mencionar "vitrine", "swap", "grade", etc. ATENÇÃO: Aparelhos que apresentam saúde de bateria SÃO SEMINOVOS (se o fornecedor informar a saúde da bateria, classifique obrigatoriamente a condição como "Seminovo", ignorando o percentual na classificação).
 4. Extraia as demais informações (categoria, versão, capacidade de armazenamento, cor, saúde da bateria, preço) estritamente para as propriedades disponíveis no esquema.`
   ],
   ["human", "Texto de entrada:\n{texto}"]
