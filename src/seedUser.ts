@@ -12,7 +12,7 @@ async function seedUser() {
     await mongoose.connect(MONGO_URI);
     console.log('📦 Conectado ao MongoDB para Seed!');
 
-    const email = 'admin@veiggi.com'; // Altere se desejar
+    const email = 'admin@comprastech.com'; // Altere se desejar
     const password = 'Neymar@1'; // Senha padrão
     const name = 'Admin Veiggi';
 
