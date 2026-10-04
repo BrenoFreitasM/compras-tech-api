@@ -6,6 +6,8 @@ import * as swaggerDocument from './swagger.json';
 import webhookRoutes from './routes/webhookRoutes';
 import productRoutes from './routes/productRoutes';
 import categoryRoutes from './routes/categoryRoutes';
+import authRoutes from './routes/authRoutes';
+import { authMiddleware } from './middleware/authMiddleware';
 
 dotenv.config();
 
@@ -17,8 +19,9 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Registra as rotas
 app.use('/webhook', webhookRoutes);
-app.use('/products', productRoutes);
-app.use('/categories', categoryRoutes);
+app.use('/auth', authRoutes); // /auth/login e /auth/register
+app.use('/products', productRoutes); // Deixado público para o frontend compras-tech
+app.use('/categories', categoryRoutes); // Deixado público
 
 const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI as string;
