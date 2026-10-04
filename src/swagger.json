@@ -89,7 +89,7 @@
     "/products": {
       "get": {
         "summary": "Lista produtos extraídos",
-        "description": "Retorna os produtos salvos no banco de dados. Permite filtragem dinâmica por qualquer campo.",
+        "description": "Retorna os produtos salvos no banco de dados. Permite filtragem dinâmica por qualquer campo, incluindo busca por nome da categoria.",
         "tags": [
           "Products"
         ],
@@ -97,7 +97,15 @@
           {
             "name": "categoria",
             "in": "query",
-            "description": "Filtra por categoria (ex: Smartphone, Smartwatch)",
+            "description": "Filtra por nome da categoria (ex: Smartphone, Smartwatch)",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "categoryId",
+            "in": "query",
+            "description": "Filtra pelo ID da categoria",
             "schema": {
               "type": "string"
             }
@@ -173,6 +181,14 @@
             "schema": {
               "type": "boolean"
             }
+          },
+          {
+            "name": "condicao",
+            "in": "query",
+            "description": "Filtra por condição (Novo ou Seminovo)",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -196,8 +212,16 @@
                       "items": {
                         "type": "object",
                         "properties": {
-                          "categoria": {
-                            "type": "string"
+                          "categoryId": {
+                            "type": "object",
+                            "properties": {
+                              "_id": {
+                                "type": "string"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            }
                           },
                           "modelo": {
                             "type": "string"
@@ -214,10 +238,19 @@
                           "saude_bateria": {
                             "type": "string"
                           },
+                          "condicao": {
+                            "type": "string"
+                          },
                           "preco": {
                             "type": "string"
                           },
                           "observacoes": {
+                            "type": "string"
+                          },
+                          "groupName": {
+                            "type": "string"
+                          },
+                          "groupJid": {
                             "type": "string"
                           },
                           "remoteJid": {
@@ -229,6 +262,46 @@
                           "timestamp": {
                             "type": "string",
                             "format": "date-time"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro interno"
+          }
+        }
+      }
+    },
+    "/categories": {
+      "get": {
+        "summary": "Lista todas as categorias criadas",
+        "description": "Retorna todas as categorias existentes no banco de dados.",
+        "tags": [
+          "Categories"
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de categorias",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "categories": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "_id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
                           }
                         }
                       }

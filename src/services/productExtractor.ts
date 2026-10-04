@@ -18,7 +18,8 @@ const produtoSchema = z.object({
   cor: z.string().nullable().describe("Cor do aparelho (ex: Preto, Dourado, Titânio, Branco, etc)"),
   saude_bateria: z.string().nullable().describe("Porcentagem de saúde da bateria (ex: 77%, 100%)"),
   preco: z.string().nullable().describe("Preço com desconto no Pix (ex: R$ 1.490)"),
-  observacoes: z.string().nullable().describe("Outras notas como estado de uso ou garantia (ex: Zero, Garantia Apple, 4 Meses de uso)"),
+  condicao: z.enum(["Novo", "Seminovo"]).nullable().describe("A condição do aparelho, deve ser 'Novo' ou 'Seminovo'"),
+  observacoes: z.string().nullable().describe("Outras notas de uso/garantia (ex: Vitrine, Grade A, Garantia Apple, etc)"),
 });
 
 const schema = z.object({
@@ -37,8 +38,14 @@ const prompt = ChatPromptTemplate.fromMessages([
     `Você é um assistente especialista em extração de dados de e-commerce e inventário. 
 Sua tarefa é encontrar e catalogar todos os produtos listados no texto fornecido.
 O texto pode conter iPhones, MacBooks, Apple Watches, Câmeras e Acessórios.
-Extraia as informações detalhadas sobre a categoria, modelo, versão, capacidade de armazenamento, cor, saúde da bateria, preço e outras observações de cada item.
-Siga estritamente as propriedades disponíveis no esquema.`
+
+Regras rigorosas para a extração:
+1. O campo "modelo" deve conter APENAS o nome base do aparelho (ex: "iPhone 16", "iPhone 16 Pro", "MacBook Air"). 
+2. Características adicionais (armazenamento, cor, condição) NÃO devem ir no campo "modelo", e sim em seus respectivos campos.
+3. Preencha o campo "condicao" da seguinte forma:
+   - "Novo": Se o texto mencionar "lacrado", "CPO" ou "novo".
+   - "Seminovo": Se o texto mencionar "vitrine", "swap", "grade", etc, ou se estiver implícito pelo estado de uso.
+4. Extraia as demais informações (categoria, versão, capacidade de armazenamento, cor, saúde da bateria, preço) estritamente para as propriedades disponíveis no esquema.`
   ],
   ["human", "Texto de entrada:\n{texto}"]
 ]);

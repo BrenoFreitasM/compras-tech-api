@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { MessageModel } from '../models/MessageModel';
 import { ProductModel } from '../models/ProductModel';
+import { CategoryModel } from '../models/CategoryModel';
 import { extractProductsFromText } from '../services/productExtractor';
 
 const router = Router();
@@ -8,10 +8,8 @@ const router = Router();
 router.post('/evolution', async (req: Request, res: Response) => {
   try {
     const payload = req.body;
-    console.log(`\n[WEBHOOK RECEBIDO] Instância: ${payload.instance} | Evento: ${payload.event}`);
+    console.log(`[Webhook] Requisição recebida em /webhook/evolution`);
 
-    // A Evolution envia o evento indicando do que se trata.
-    // Queremos apenas mensagens sendo criadas/recebidas
     if (payload.event === 'messages.upsert') {
 
       const messageData = payload.data.message ? payload.data : payload.data.messages?.[0];
@@ -20,34 +18,26 @@ router.post('/evolution', async (req: Request, res: Response) => {
         return res.status(200).json({ success: true });
       }
 
-      const remoteJid = messageData.key.remoteJid;
+      // Se a mensagem vier de um grupo, o remetente real fica em 'participant'.
+      // Caso seja mensagem direta (privada), fica em 'remoteJid'.
+      // Aqui garantimos que 'remoteJid' do nosso banco salvará o número de quem efetivamente enviou.
+      const remoteJid = messageData.key?.participant || messageData.participant || messageData.key?.remoteJid;
 
-      console.log("ALGUÉM MANDOU MENSAGEM! O Número exato é:", remoteJid);
+      // Identifica dados do grupo se vier de um
+      const isGroup = messageData.key?.remoteJid?.endsWith('@g.us');
+      const groupJid = isGroup ? messageData.key.remoteJid : null;
+      // Às vezes a Evolution envia o nome do grupo no objeto do webhook
+      const groupName = isGroup ? (messageData.groupName || payload.data.groupName || messageData.pushName || "Grupo Desconhecido") : null;
 
-      // Extrai o texto da mensagem (varia se é texto puro, imagem com legenda, etc)
       const text = 
         messageData.message?.conversation || 
         messageData.message?.extendedTextMessage?.text || 
         messageData.message?.imageMessage?.caption || 
         '';
 
-      console.log(`[MENSAGEM RECEBIDA] Mensagem de ${remoteJid}: ${text}`);
+      console.log(`[MENSAGEM RECEBIDA] Mensagem de ${remoteJid}${isGroup ? ` (Grupo: ${groupName})` : ''}`);
 
       try {
-        // Salva no MongoDB
-        await MessageModel.create({
-          instanceId: payload.instance,
-          messageId: messageData.key?.id || 'SEM_ID',
-          remoteJid: remoteJid,
-          pushName: messageData.pushName || '',
-          text: text,
-          timestamp: new Date((messageData.messageTimestamp || Date.now() / 1000) * 1000), // Converte timestamp UNIX
-          // rawPayload: payload
-        });
-        console.log(`✅ Mensagem de ${remoteJid} salva no banco com sucesso!`);
-
-        // Extração de produtos a partir do texto
-        // Para economizar tokens, verificamos se o texto parece conter uma lista de produtos
         const pareceCatalogo = /(R\$|iphone|macbook|apple watch|ipad|oferta|seminovo|produtos)/i.test(text);
 
         if (text && pareceCatalogo) {
@@ -56,7 +46,6 @@ router.post('/evolution', async (req: Request, res: Response) => {
           if (produtos.length > 0) {
             console.log(`✅ Extração concluída! Foram encontrados ${produtos.length} produtos.`);
             
-            // Desativa produtos antigos deste fornecedor
             const startOfToday = new Date();
             startOfToday.setHours(0, 0, 0, 0);
 
@@ -74,9 +63,24 @@ router.post('/evolution', async (req: Request, res: Response) => {
 
             // Salva cada produto novo extraído no banco
             for (const prod of produtos) {
+              const categoryName = prod.categoria || 'Outros';
+              
+              // Verifica se a categoria já existe, senão cria
+              let category = await CategoryModel.findOne({ name: categoryName });
+              if (!category) {
+                category = await CategoryModel.create({ name: categoryName });
+                console.log(`🆕 Nova categoria criada: ${categoryName}`);
+              }
+
+              // Remove 'categoria' string e adiciona 'categoryId'
+              const { categoria, ...prodData } = prod;
+
               await ProductModel.create({
-                ...prod,
+                ...prodData,
+                categoryId: category._id,
                 remoteJid: remoteJid,
+                groupName: groupName,
+                groupJid: groupJid,
                 messageId: messageData.key?.id || 'SEM_ID',
                 timestamp: new Date((messageData.messageTimestamp || Date.now() / 1000) * 1000),
                 active: true
@@ -87,7 +91,7 @@ router.post('/evolution', async (req: Request, res: Response) => {
             console.log(`Nenhum produto encontrado no texto de ${remoteJid}.`);
           }
         } else if (text) {
-          console.log(`⏭️  [IA IGNORADA] O texto não parece um catálogo. A IA não foi acionada para economizar tokens.`);
+          console.log(`⏭️  [IGNORADA] O texto não parece um catálogo. Mensagem ignorada (IA não acionada e não salva no banco).`);
         }
       } catch (dbError) {
         console.error(`❌ Erro ao salvar mensagem ou produtos no MongoDB:`, dbError);
