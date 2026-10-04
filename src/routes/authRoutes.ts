@@ -99,4 +99,19 @@ router.post('/register', authMiddleware, async (req: Request, res: Response): Pr
   }
 });
 
+
+router.get('/me', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userPayload = (req as any).user;
+    const user = await UserModel.findById(userPayload.userId).select('-passwordHash');
+    if (!user) {
+      res.status(401).json({ success: false, error: 'Usuário não encontrado' });
+      return;
+    }
+    res.json({ success: true, user });
+  } catch (error) {
+    res.status(500).json({ success: false, error: 'Erro interno' });
+  }
+});
+
 export default router;
