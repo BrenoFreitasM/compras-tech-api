@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  webhook-api:
+    build: .
+    container_name: veiggi-webhook-api
+    restart: always
+    ports:
+      - "3002:3002"
+    env_file:
+      - .env
