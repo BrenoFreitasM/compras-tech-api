@@ -18,6 +18,14 @@ export async function authMiddleware(req: AuthRequest, res: Response, next: Next
     }
 
     const token = authHeader.split(' ')[1];
+    const MASTER_API_KEY = process.env.MASTER_API_KEY;
+
+    // Se o token fornecido for igual ao token fixo do .env, libera acesso total
+    if (MASTER_API_KEY && token === MASTER_API_KEY) {
+      req.user = { role: 'master' };
+      next();
+      return;
+    }
     
     // Verifica a assinatura e expiração do JWT
     const decoded = jwt.verify(token, JWT_SECRET) as any;
