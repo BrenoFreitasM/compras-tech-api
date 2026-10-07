@@ -441,6 +441,33 @@
           }
         }
       }
+    },
+    "/products/models": {
+      "get": {
+        "summary": "Listar todos os modelos disponíveis",
+        "tags": [
+          "Produtos"
+        ],
+        "parameters": [
+          {
+            "name": "categoryId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID da Categoria para filtrar modelos"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "500": {
+            "description": "Erro interno"
+          }
+        }
+      }
     }
   },
   "components": {

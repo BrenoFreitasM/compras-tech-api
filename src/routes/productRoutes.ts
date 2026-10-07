@@ -4,6 +4,29 @@ import { CategoryModel } from '../models/CategoryModel';
 
 const router = Router();
 
+router.get('/models', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { categoryId } = req.query;
+    const filter: any = { active: true }; // Pegar apenas de produtos ativos
+
+    if (categoryId) {
+      filter.categoryId = categoryId;
+    }
+
+    // Busca todos os modelos distintos (distinct) baseados no filtro
+    const models = await ProductModel.distinct('modelo', filter);
+    
+    // Remove nulos e organiza em ordem alfabética
+    const cleanModels = models.filter(m => m).sort();
+
+    res.status(200).json({ success: true, count: cleanModels.length, data: cleanModels });
+  } catch (error) {
+    console.error('Erro ao buscar modelos:', error);
+    res.status(500).json({ success: false, error: 'Erro interno ao buscar modelos' });
+  }
+});
+
+
 router.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const queryParams = req.query;
