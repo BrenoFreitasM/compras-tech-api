@@ -6,11 +6,28 @@ const router = Router();
 
 router.get('/models', async (req: Request, res: Response): Promise<void> => {
   try {
-    const { categoryId } = req.query;
+    const { categoria, categoryId } = req.query;
     const filter: any = { active: true }; // Pegar apenas de produtos ativos
 
+    // Suporte para filtrar pelo ID da categoria
     if (categoryId) {
       filter.categoryId = categoryId;
+    }
+
+    // Suporte para filtrar pelo NOME da categoria (ex: ?categoria=iPhone)
+    if (categoria) {
+      const categories = await CategoryModel.find({ 
+        name: { $regex: new RegExp(categoria as string, 'i') } 
+      });
+      const categoryIds = categories.map(c => c._id);
+      
+      if (categoryIds.length > 0) {
+        filter.categoryId = { $in: categoryIds };
+      } else {
+        // Categoria não encontrada, logo não há modelos
+        res.status(200).json({ success: true, count: 0, data: [] });
+        return;
+      }
     }
 
     // Busca todos os modelos distintos (distinct) baseados no filtro

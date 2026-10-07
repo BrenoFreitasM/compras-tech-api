@@ -457,6 +457,15 @@
               "type": "string"
             },
             "description": "ID da Categoria para filtrar modelos"
+          },
+          {
+            "name": "categoria",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Nome da categoria para buscar (ex: Smartphone, iPhone, etc)"
           }
         ],
         "responses": {
