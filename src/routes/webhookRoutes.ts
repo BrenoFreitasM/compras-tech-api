@@ -1,9 +1,9 @@
 import { Router, Request, Response } from 'express';
-import { ProductModel } from '../models/ProductModel';
-import { CategoryModel } from '../models/CategoryModel';
 import { extractProductsFromText } from '../services/productExtractor';
+import { ProductIngestService } from '../services/productIngestService';
 
 const router = Router();
+const ingestService = new ProductIngestService();
 
 router.post('/evolution', async (req: Request, res: Response) => {
   // 1. Responde 200 OK imediatamente para a Evolution API
@@ -50,48 +50,28 @@ router.post('/evolution', async (req: Request, res: Response) => {
           
           if (produtos.length > 0) {
             console.log(`✅ Extração concluída! Foram encontrados ${produtos.length} produtos.`);
-            
-            const startOfToday = new Date();
-            startOfToday.setHours(0, 0, 0, 0);
 
-            const desativados = await ProductModel.updateMany(
+            const resumo = await ingestService.processarLista(
+              produtos,
+              { remoteJid, nome: messageData.pushName || null },
               {
-                remoteJid: remoteJid,
-                timestamp: { $lt: startOfToday },
-                active: true
-              },
-              {
-                $set: { active: false }
-              }
-            );
-            console.log(`🧹 ${desativados.modifiedCount} produtos antigos de ${remoteJid} foram desativados.`);
-
-            for (const prod of produtos) {
-              const categoryName = prod.categoria || 'Outros';
-              
-              let category = await CategoryModel.findOne({ name: categoryName });
-              if (!category) {
-                category = await CategoryModel.create({ name: categoryName });
-                console.log(`🆕 Nova categoria criada: ${categoryName}`);
-              }
-
-              const { categoria, ...prodData } = prod;
-
-              await ProductModel.create({
-                ...prodData,
-                categoryId: category._id,
-                remoteJid: remoteJid,
-                groupName: groupName,
-                groupJid: groupJid,
                 messageId: messageData.key?.id || 'SEM_ID',
                 timestamp: new Date((messageData.messageTimestamp || Date.now() / 1000) * 1000),
-                active: true
-              });
-            }
-            console.log(`✅ Produtos de ${remoteJid} salvos no banco com sucesso!`);
+                groupJid,
+                groupName,
+              },
+            );
+
+            console.log(
+              `✅ Lista de ${remoteJid} processada: ` +
+              `${resumo.produtosNovos} novos no catálogo, ${resumo.produtosExistentes} já existentes, ` +
+              `${resumo.ofertasCriadas} ofertas criadas, ${resumo.ofertasAtualizadas} atualizadas, ` +
+              `${resumo.ofertasDesativadas} desativadas, ${resumo.falhas} falhas.`
+            );
           } else {
             console.log(`Nenhum produto encontrado no texto de ${remoteJid}.`);
           }
+
         } else if (text) {
           console.log(`⏭️  [IGNORADA] O texto não parece um catálogo. Mensagem ignorada.`);
         }

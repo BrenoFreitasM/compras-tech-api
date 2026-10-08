@@ -22,6 +22,8 @@ const produtoSchema = z.object({
   observacoes: z.string().nullable().describe("Outras notas de uso/garantia (ex: Vitrine, Grade A, Garantia Apple, etc)"),
 });
 
+export type ProdutoExtraido = z.infer<typeof produtoSchema>;
+
 const schema = z.object({
   produtos: z
     .array(produtoSchema)
