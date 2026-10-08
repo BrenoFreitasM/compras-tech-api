@@ -41,7 +41,10 @@ router.post('/evolution', async (req: Request, res: Response) => {
       console.log(`[MENSAGEM RECEBIDA] Mensagem de ${remoteJid}${isGroup ? ` (Grupo: ${groupName})` : ''}`);
 
       try {
-        const pareceCatalogo = /(R\$|iphone|macbook|apple watch|ipad|oferta|seminovo|produtos)/i.test(text);
+        // Regex melhorada para detectar catálogos:
+        // Inclui novos produtos da Apple (Airpods, Airtag, Pencil, iMac)
+        // Inclui termos comuns de fornecedores (Lista atualizada, dropshipping, atacado, tabela, lacrado, vitrine)
+        const pareceCatalogo = /(R\$|iphone|macbook|apple watch|ipad|airpods|airtag|apple pencil|imac|oferta|seminovo|produtos|lista atualizada|dropshipping|atacado|tabela|lacrado|vitrine|swap)/i.test(text);
 
         // SALVA O PAYLOAD CRU NO DATA LAKE (Independente se é catálogo ou não)
         await WebhookMessageModel.create({
