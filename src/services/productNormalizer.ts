@@ -9,19 +9,74 @@ const FILLER_TOKENS = new Set(['apple', 'de', 'da', 'do', 'com', 'o', 'a', 'e'])
 /** Palavras que distinguem produtos diferentes e NUNCA podem divergir num fuzzy match (13 Pro != 13 Pro Max). */
 const VARIANT_TOKENS = new Set(['pro', 'max', 'plus', 'ultra', 'mini', 'se', 'air']);
 
+// Dicionário extensivo mapeando variações de cores e nomes de marketing da Apple 
+// para uma "Cor Canônica" em Português.
 const COLOR_SYNONYMS: Record<string, string> = {
-  black: 'preto',
-  white: 'branco',
-  blue: 'azul',
-  gold: 'dourado',
-  silver: 'prata',
-  purple: 'roxo',
-  red: 'vermelho',
-  green: 'verde',
-  pink: 'rosa',
-  yellow: 'amarelo',
-  graphite: 'grafite',
+  // === TONS ESCUROS / PRETOS ===
+  'black': 'preto',
+  'space gray': 'cinza espacial',
+  'space grey': 'cinza espacial',
+  'cinza': 'cinza espacial',
+  'gray': 'cinza espacial',
+  'grey': 'cinza espacial',
+  'graphite': 'grafite',
+  'midnight': 'meia noite',
+  'meia-noite': 'meia noite',
+  'space black': 'preto espacial',
+
+  // === TONS CLAROS / BRANCOS ===
+  'white': 'branco',
+  'starlight': 'estelar',
+  'star light': 'estelar',
+  'silver': 'prata',
+  'polar': 'estelar', // as vezes usado erroneamente para starlight
+
+  // === DOURADOS E AMARELOS ===
+  'gold': 'dourado',
+  'rose gold': 'ouro rosa',
+  'yellow': 'amarelo',
+  'ouro': 'dourado',
+
+  // === AZUIS ===
+  'blue': 'azul',
+  'pacific blue': 'azul pacifico',
+  'sierra blue': 'azul sierra',
+  'midnight blue': 'azul meia noite',
+  'deep blue': 'azul profundo',
+
+  // === VERDES ===
+  'green': 'verde',
+  'midnight green': 'verde meia noite',
+  'alpine green': 'verde alpino',
+
+  // === VERMELHOS E ROSAS ===
+  'red': 'vermelho',
+  'product red': 'vermelho',
+  'product(red)': 'vermelho',
+  'pink': 'rosa',
+  'rose': 'rosa',
+
+  // === ROXOS ===
+  'purple': 'roxo',
+  'deep purple': 'roxo profundo',
+  'violeta': 'roxo',
+
+  // === TITÂNIO (Linha 15 Pro e 16 Pro) ===
+  'titanium': 'titanio',
+  'natural titanium': 'titanio natural',
+  'titanio natural': 'titanio natural',
+  'blue titanium': 'titanio azul',
+  'titanio azul': 'titanio azul',
+  'white titanium': 'titanio branco',
+  'titanio branco': 'titanio branco',
+  'black titanium': 'titanio preto',
+  'titanio preto': 'titanio preto',
+  'desert titanium': 'titanio deserto',
+  'titanio deserto': 'titanio deserto',
 };
+
+// Como o texto chega normalizado sem acentos pelo normalizeText,
+// temos que garantir que a busca no dicionário também lide com termos compostos.
 
 export function normalizeText(value: string | null | undefined): string {
   if (!value) return '';
@@ -73,12 +128,24 @@ export function normalizeStorage(value: string | null | undefined): string | nul
 }
 
 export function normalizeColor(value: string | null | undefined): string | null {
-  const normalized = normalizeText(value);
+  let normalized = normalizeText(value);
   if (!normalized) return null;
-  return normalized
-    .split(' ')
-    .map((token) => COLOR_SYNONYMS[token] ?? token)
-    .join(' ');
+
+  if (COLOR_SYNONYMS[normalized]) {
+    return COLOR_SYNONYMS[normalized];
+  }
+
+  let result = normalized;
+  const sortedKeys = Object.keys(COLOR_SYNONYMS).sort((a, b) => b.length - a.length);
+  for (const key of sortedKeys) {
+    if (result.includes(key)) {
+      const regex = new RegExp(`\\b${key}\\b`, 'g');
+      result = result.replace(regex, COLOR_SYNONYMS[key]);
+    }
+  }
+
+  const tokens = result.split(' ');
+  return [...new Set(tokens)].join(' ');
 }
 
 /** "77%" | "77 %" | "bateria 77" -> "77%". */
