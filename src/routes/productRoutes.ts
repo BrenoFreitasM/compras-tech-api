@@ -62,6 +62,32 @@ router.get('/models', async (req: Request, res: Response): Promise<void> => {
  * Lista ofertas (produtos_disponiveis) já "achatadas" com os dados do produto e do fornecedor,
  * mantendo o contrato anterior consumido pelo front (modelo, versao, preco, remoteJid, active...).
  */
+
+router.get('/colors', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const produtoFilter = await buildProdutoFilter({ 
+      categoria: req.query.categoria, 
+      categoryId: req.query.categoryId,
+      modelo: req.query.modelo 
+    });
+    
+    if (!produtoFilter) {
+      res.status(200).json({ success: true, count: 0, data: [] });
+      return;
+    }
+
+    // Apenas cores de produtos com pelo menos uma oferta disponível
+    const produtoIds = await ProdutoDisponivelModel.distinct('produtoId', { status: 'disponivel' });
+    const colors = await ProdutoModel.distinct('cor', { ...produtoFilter, _id: { $in: produtoIds } });
+
+    const cleanColors = colors.filter((c) => c).sort();
+    res.status(200).json({ success: true, count: cleanColors.length, data: cleanColors });
+  } catch (error) {
+    console.error('Erro ao buscar cores:', error);
+    res.status(500).json({ success: false, error: 'Erro interno ao buscar cores' });
+  }
+});
+
 router.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const q = req.query;

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { extractProductsFromText } from '../services/productExtractor';
 import { ProductIngestService } from '../services/productIngestService';
+import { WebhookMessageModel } from '../models/WebhookMessageModel';
 
 const router = Router();
 const ingestService = new ProductIngestService();
@@ -41,6 +42,18 @@ router.post('/evolution', async (req: Request, res: Response) => {
 
       try {
         const pareceCatalogo = /(R\$|iphone|macbook|apple watch|ipad|oferta|seminovo|produtos)/i.test(text);
+
+        // SALVA O PAYLOAD CRU NO DATA LAKE (Independente se é catálogo ou não)
+        await WebhookMessageModel.create({
+          event: payload.event,
+          remoteJid,
+          groupJid,
+          groupName,
+          messageId: messageData.key?.id || 'SEM_ID',
+          text,
+          rawPayload: payload,
+          isCatalog: pareceCatalogo
+        });
 
         if (text && pareceCatalogo) {
           console.log(`\n🤖 [IA ACIONADA] O texto de ${remoteJid} parece um catálogo. Enviando para análise (consumirá tokens OpenAI)...`);

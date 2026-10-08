@@ -477,6 +477,51 @@
           }
         }
       }
+    },
+    "/products/colors": {
+      "get": {
+        "summary": "Listar todas as cores disponíveis",
+        "tags": [
+          "Produtos"
+        ],
+        "parameters": [
+          {
+            "name": "categoryId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "ID da Categoria"
+          },
+          {
+            "name": "categoria",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Nome da categoria (ex: Smartphone)"
+          },
+          {
+            "name": "modelo",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filtrar cores de um modelo específico (ex: iPhone 15)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sucesso"
+          },
+          "500": {
+            "description": "Erro interno"
+          }
+        }
+      }
     }
   },
   "components": {
