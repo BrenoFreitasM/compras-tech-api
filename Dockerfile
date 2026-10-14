@@ -1,7 +1,7 @@
 # ==========================================
 # Estágio 1: Build (Construção da Aplicação)
 # ==========================================
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
@@ -21,7 +21,7 @@ RUN npm run build
 # ==========================================
 # Estágio 2: Produção (Imagem Final Leve)
 # ==========================================
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 
 # Define variável de ambiente como produção para otimizações do Node/Express
 ENV NODE_ENV=production
@@ -32,7 +32,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Instala APENAS as dependências necessárias para rodar o app (ignora devDependencies)
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 # Copia apenas os arquivos já compilados do estágio anterior
 COPY --from=builder /app/dist ./dist
