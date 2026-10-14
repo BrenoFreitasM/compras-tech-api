@@ -14,9 +14,18 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
   try {
     const { email, password } = req.body;
 
-    const user = await UserModel.findOne({ email });
+    if (!email || !password) {
+      res.status(400).json({ success: false, error: 'E-mail e senha são obrigatórios' });
+      return;
+    }
+
+    const cleanEmail = typeof email === 'string' ? email.trim() : '';
+    const escapedEmail = cleanEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const user = await UserModel.findOne({
+      email: { $regex: new RegExp(`^${escapedEmail}$`, 'i') },
+    });
     if (!user) {
-      log.warn({ email }, 'Tentativa de login com e-mail inexistente');
+      log.warn({ email: cleanEmail }, 'Tentativa de login com e-mail inexistente');
       res.status(401).json({ success: false, error: 'Credenciais inválidas' });
       return;
     }
