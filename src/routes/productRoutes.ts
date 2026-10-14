@@ -4,6 +4,7 @@ import { ProdutoModel } from '../models/ProdutoModel';
 import { ProdutoDisponivelModel } from '../models/ProdutoDisponivelModel';
 import { FornecedorModel } from '../models/FornecedorModel';
 import { CategoryModel } from '../models/CategoryModel';
+import { logger } from '../utils/logger';
 
 const router = Router();
 
@@ -39,6 +40,7 @@ async function buildProdutoFilter(query: Request['query']): Promise<Record<strin
 }
 
 router.get('/models', async (req: Request, res: Response): Promise<void> => {
+  const log = req.log || logger;
   try {
     const produtoFilter = await buildProdutoFilter({ categoria: req.query.categoria, categoryId: req.query.categoryId });
     if (!produtoFilter) {
@@ -53,7 +55,7 @@ router.get('/models', async (req: Request, res: Response): Promise<void> => {
     const cleanModels = models.filter((m) => m).sort();
     res.status(200).json({ success: true, count: cleanModels.length, data: cleanModels });
   } catch (error) {
-    console.error('Erro ao buscar modelos:', error);
+    log.error({ err: error }, 'Erro ao buscar modelos');
     res.status(500).json({ success: false, error: 'Erro interno ao buscar modelos' });
   }
 });
@@ -64,6 +66,7 @@ router.get('/models', async (req: Request, res: Response): Promise<void> => {
  */
 
 router.get('/colors', async (req: Request, res: Response): Promise<void> => {
+  const log = req.log || logger;
   try {
     const produtoFilter = await buildProdutoFilter({ 
       categoria: req.query.categoria, 
@@ -83,12 +86,13 @@ router.get('/colors', async (req: Request, res: Response): Promise<void> => {
     const cleanColors = colors.filter((c) => c).sort();
     res.status(200).json({ success: true, count: cleanColors.length, data: cleanColors });
   } catch (error) {
-    console.error('Erro ao buscar cores:', error);
+    log.error({ err: error }, 'Erro ao buscar cores');
     res.status(500).json({ success: false, error: 'Erro interno ao buscar cores' });
   }
 });
 
 router.get('/', async (req: Request, res: Response): Promise<void> => {
+  const log = req.log || logger;
   try {
     const q = req.query;
     const filter: Record<string, any> = {};
@@ -175,7 +179,7 @@ router.get('/', async (req: Request, res: Response): Promise<void> => {
       data,
     });
   } catch (error) {
-    console.error('Erro ao buscar produtos:', error);
+    log.error({ err: error }, 'Erro ao buscar produtos');
     res.status(500).json({ success: false, error: 'Erro interno ao buscar produtos' });
   }
 });

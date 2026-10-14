@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { extractProductsFromText } from '../services/productExtractor';
 import { ProductIngestService } from '../services/productIngestService';
 import { WebhookMessageModel } from '../models/WebhookMessageModel';
+import { logger } from '../utils/logger';
 
 const router = Router();
 const ingestService = new ProductIngestService();
@@ -11,16 +12,18 @@ router.post('/evolution', async (req: Request, res: Response) => {
   // Isso evita que a requisição fique "travada" aguardando a OpenAI e impede retentativas desnecessárias.
   res.status(200).json({ success: true });
 
+  const rootLog = req.log || logger;
+
   // 2. Processa os dados assincronamente em background
   try {
     const payload = req.body;
-    console.log(`[Webhook] Requisição recebida em /webhook/evolution`);
+    rootLog.debug({ event: payload?.event }, 'Payload de webhook recebido em /webhook/evolution');
 
-    if (payload.event === 'messages.upsert') {
-      const messageData = payload.data.message ? payload.data : payload.data.messages?.[0];
+    if (payload?.event === 'messages.upsert') {
+      const messageData = payload.data?.message ? payload.data : payload.data?.messages?.[0];
       if (!messageData) {
-        console.log("Recebi um evento vazio da Evolution.");
-        return; // Não enviamos res.status aqui pois já enviamos no topo
+        rootLog.warn('Recebido evento messages.upsert com payload de mensagem vazio');
+        return;
       }
 
       // Se a mensagem vier de um grupo, o remetente real fica em 'participant'.
@@ -28,9 +31,10 @@ router.post('/evolution', async (req: Request, res: Response) => {
       const remoteJid = messageData.key?.participant || messageData.participant || messageData.key?.remoteJid;
 
       // Identifica dados do grupo se vier de um
-      const isGroup = messageData.key?.remoteJid?.endsWith('@g.us');
-      const groupJid = isGroup ? messageData.key.remoteJid : null;
-      const groupName = isGroup ? (messageData.groupName || payload.data.groupName || messageData.pushName || "Grupo Desconhecido") : null;
+      const isGroup = Boolean(messageData.key?.remoteJid?.endsWith('@g.us'));
+      const groupJid = isGroup ? messageData.key?.remoteJid : null;
+      const groupName = isGroup ? (messageData.groupName || payload.data?.groupName || messageData.pushName || 'Grupo Desconhecido') : null;
+      const messageId = messageData.key?.id || 'SEM_ID';
 
       const text = 
         messageData.message?.conversation || 
@@ -38,12 +42,17 @@ router.post('/evolution', async (req: Request, res: Response) => {
         messageData.message?.imageMessage?.caption || 
         '';
 
-      console.log(`[MENSAGEM RECEBIDA] Mensagem de ${remoteJid}${isGroup ? ` (Grupo: ${groupName})` : ''}`);
+      // Cria logger contextualizado com remetente, grupo e messageId
+      const log = rootLog.child({
+        remoteJid,
+        isGroup,
+        groupName: groupName || undefined,
+        messageId,
+      });
+
+      log.info({ textLength: text.length }, 'Mensagem de WhatsApp recebida');
 
       try {
-        // Regex melhorada para detectar catálogos:
-        // Inclui novos produtos da Apple (Airpods, Airtag, Pencil, iMac)
-        // Inclui termos comuns de fornecedores (Lista atualizada, dropshipping, atacado, tabela, lacrado, vitrine)
         const pareceCatalogo = /(R\$|iphone|macbook|apple watch|ipad|airpods|airtag|apple pencil|imac|oferta|seminovo|produtos|lista atualizada|dropshipping|atacado|tabela|lacrado|vitrine|swap)/i.test(text);
 
         // SALVA O PAYLOAD CRU NO DATA LAKE (Independente se é catálogo ou não)
@@ -52,52 +61,55 @@ router.post('/evolution', async (req: Request, res: Response) => {
           remoteJid,
           groupJid,
           groupName,
-          messageId: messageData.key?.id || 'SEM_ID',
+          messageId,
           text,
           rawPayload: payload,
-          isCatalog: pareceCatalogo
+          isCatalog: pareceCatalogo,
         });
 
         if (text && pareceCatalogo) {
-          console.log(`\n🤖 [IA ACIONADA] O texto de ${remoteJid} parece um catálogo. Enviando para análise (consumirá tokens OpenAI)...`);
+          log.info('Texto identificado como catálogo. Enviando para análise da OpenAI...');
           
-          // Isso aqui pode demorar vários segundos, mas como já demos "res.status(200)", a API não está travada!
+          const startTime = Date.now();
           const produtos = await extractProductsFromText(text);
+          const durationMs = Date.now() - startTime;
           
           if (produtos.length > 0) {
-            console.log(`✅ Extração concluída! Foram encontrados ${produtos.length} produtos.`);
+            log.info({ count: produtos.length, durationMs }, 'Extração da IA concluída com sucesso');
 
             const resumo = await ingestService.processarLista(
               produtos,
               { remoteJid, nome: messageData.pushName || null },
               {
-                messageId: messageData.key?.id || 'SEM_ID',
+                messageId,
                 timestamp: new Date((messageData.messageTimestamp || Date.now() / 1000) * 1000),
                 groupJid,
                 groupName,
               },
             );
 
-            console.log(
-              `✅ Lista de ${remoteJid} processada: ` +
-              `${resumo.produtosNovos} novos no catálogo, ${resumo.produtosExistentes} já existentes, ` +
-              `${resumo.ofertasCriadas} ofertas criadas, ${resumo.ofertasAtualizadas} atualizadas, ` +
-              `${resumo.ofertasDesativadas} desativadas, ${resumo.falhas} falhas.`
+            log.info(
+              {
+                resumo,
+                durationMs,
+              },
+              `Lista de produtos processada: ${resumo.produtosNovos} novos, ${resumo.ofertasCriadas} ofertas criadas, ${resumo.ofertasAtualizadas} atualizadas`,
             );
           } else {
-            console.log(`Nenhum produto encontrado no texto de ${remoteJid}.`);
+            log.warn({ durationMs }, 'Nenhum produto identificado pela IA no texto do catálogo');
           }
 
         } else if (text) {
-          console.log(`⏭️  [IGNORADA] O texto não parece um catálogo. Mensagem ignorada.`);
+          log.debug('Texto não parece um catálogo. Mensagem ignorada para análise de IA.');
         }
       } catch (dbError) {
-        console.error(`❌ Erro ao salvar mensagem ou produtos no MongoDB:`, dbError);
+        log.error({ err: dbError }, 'Erro ao salvar mensagem ou produtos no MongoDB');
       }
     }
   } catch (error) {
-    console.error('Erro ao processar webhook em background:', error);
+    rootLog.error({ err: error }, 'Erro ao processar webhook em background');
   }
 });
 
 export default router;
+

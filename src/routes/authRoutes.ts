@@ -4,22 +4,26 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { UserModel } from '../models/UserModel';
 import { authMiddleware } from '../middleware/authMiddleware';
+import { logger } from '../utils/logger';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_key';
 
 router.post('/login', async (req: Request, res: Response): Promise<void> => {
+  const log = req.log || logger;
   try {
     const { email, password } = req.body;
 
     const user = await UserModel.findOne({ email });
     if (!user) {
+      log.warn({ email }, 'Tentativa de login com e-mail inexistente');
       res.status(401).json({ success: false, error: 'Credenciais inválidas' });
       return;
     }
 
     const isValid = await bcrypt.compare(password, user.passwordHash);
     if (!isValid) {
+      log.warn({ email }, 'Tentativa de login com senha incorreta');
       res.status(401).json({ success: false, error: 'Credenciais inválidas' });
       return;
     }
@@ -35,6 +39,8 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       { expiresIn: '7d' }
     );
 
+    log.info({ userId: user._id, email: user.email }, 'Usuário autenticado com sucesso');
+
     res.json({
       success: true,
       token,
@@ -45,24 +51,27 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       }
     });
   } catch (error) {
-    console.error('Erro no login:', error);
+    log.error({ err: error }, 'Erro no login');
     res.status(500).json({ success: false, error: 'Erro interno ao realizar login' });
   }
 });
 
 router.post('/logout', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  const log = req.log || logger;
   try {
     const userPayload = (req as any).user;
     await UserModel.findByIdAndUpdate(userPayload.userId, { activeSessionId: null });
     
+    log.info({ userId: userPayload.userId }, 'Logout realizado com sucesso');
     res.json({ success: true, message: 'Logout realizado com sucesso. Sessão encerrada.' });
   } catch (error) {
-    console.error('Erro no logout:', error);
+    log.error({ err: error }, 'Erro no logout');
     res.status(500).json({ success: false, error: 'Erro interno ao realizar logout' });
   }
 });
 
 router.post('/register', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  const log = req.log || logger;
   try {
     const { email, password, name } = req.body;
 
@@ -73,6 +82,7 @@ router.post('/register', authMiddleware, async (req: Request, res: Response): Pr
 
     const existingUser = await UserModel.findOne({ email });
     if (existingUser) {
+      log.warn({ email }, 'Tentativa de cadastro com email já existente');
       res.status(400).json({ success: false, error: 'Email já está em uso' });
       return;
     }
@@ -84,6 +94,8 @@ router.post('/register', authMiddleware, async (req: Request, res: Response): Pr
       name
     });
 
+    log.info({ userId: newUser._id, email: newUser.email }, 'Novo usuário registrado com sucesso');
+
     res.status(201).json({
       success: true,
       message: 'Usuário criado com sucesso',
@@ -94,13 +106,13 @@ router.post('/register', authMiddleware, async (req: Request, res: Response): Pr
       }
     });
   } catch (error) {
-    console.error('Erro ao registrar usuário:', error);
+    log.error({ err: error }, 'Erro ao registrar usuário');
     res.status(500).json({ success: false, error: 'Erro interno ao criar usuário' });
   }
 });
 
-
 router.get('/me', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  const log = req.log || logger;
   try {
     const userPayload = (req as any).user;
     const user = await UserModel.findById(userPayload.userId).select('-passwordHash');
@@ -110,6 +122,7 @@ router.get('/me', authMiddleware, async (req: Request, res: Response): Promise<v
     }
     res.json({ success: true, user });
   } catch (error) {
+    log.error({ err: error }, 'Erro ao buscar perfil do usuário');
     res.status(500).json({ success: false, error: 'Erro interno' });
   }
 });

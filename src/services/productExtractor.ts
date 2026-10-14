@@ -52,17 +52,30 @@ Regras rigorosas para a extração:
   ["human", "Texto de entrada:\n{texto}"]
 ]);
 
+import { logger } from "../utils/logger";
+
 const chain = prompt.pipe(modelWithStructure);
 
 export async function extractProductsFromText(text: string) {
   if (!text || text.trim().length === 0) {
     return [];
   }
+  const start = Date.now();
+  const log = logger.child({ module: 'ProductExtractor' });
+
+  log.debug({ inputChars: text.length }, 'Iniciando extração de produtos com OpenAI (gpt-4o-mini)');
+
   try {
     const result = await chain.invoke({ texto: text });
+    const durationMs = Date.now() - start;
+    const count = result.produtos?.length || 0;
+
+    log.info({ count, durationMs }, 'Extração da OpenAI concluída com sucesso');
     return result.produtos || [];
   } catch (error) {
-    console.error("Erro ao extrair produtos do texto:", error);
+    const durationMs = Date.now() - start;
+    log.error({ err: error, durationMs, inputChars: text.length }, 'Falha na chamada da OpenAI para extração de produtos');
     return [];
   }
 }
+

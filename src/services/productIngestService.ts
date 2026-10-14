@@ -4,6 +4,7 @@ import { ProdutoDisponivelModel } from '../models/ProdutoDisponivelModel';
 import { normalizeBattery, parsePrecoBRL } from './productNormalizer';
 import { ProdutoCatalogoService } from './produtoCatalogoService';
 import type { ProdutoExtraido } from './productExtractor';
+import { logger } from '../utils/logger';
 
 export interface RemetenteWebhook {
   remoteJid: string;
@@ -28,6 +29,8 @@ export interface ResumoIngestao {
 }
 
 export class ProductIngestService {
+  private readonly log = logger.child({ module: 'ProductIngestService' });
+
   constructor(private readonly catalogo: ProdutoCatalogoService = new ProdutoCatalogoService()) {}
 
   /**
@@ -65,7 +68,14 @@ export class ProductIngestService {
       } catch (error) {
         // Um item ruim não pode derrubar o restante da lista.
         resumo.falhas++;
-        console.error(`❌ Falha ao processar item "${item.modelo}" de ${remetente.remoteJid}:`, error);
+        this.log.error(
+          {
+            err: error,
+            itemModelo: item.modelo,
+            remoteJid: remetente.remoteJid,
+          },
+          'Falha ao processar item individual da lista de catálogo',
+        );
       }
     }
 
