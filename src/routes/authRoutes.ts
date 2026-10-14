@@ -20,6 +20,8 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
     }
 
     const cleanEmail = typeof email === 'string' ? email.trim() : '';
+    // Ignore accidental leading/trailing spaces (autocomplete / copy-paste)
+    const cleanPassword = typeof password === 'string' ? password.trim() : '';
     const escapedEmail = cleanEmail.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const user = await UserModel.findOne({
       email: { $regex: new RegExp(`^${escapedEmail}$`, 'i') },
@@ -30,7 +32,7 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const isValid = await bcrypt.compare(password, user.passwordHash);
+    const isValid = await bcrypt.compare(cleanPassword, user.passwordHash);
     if (!isValid) {
       log.warn({ email }, 'Tentativa de login com senha incorreta');
       res.status(401).json({ success: false, error: 'Credenciais inválidas' });
@@ -82,7 +84,9 @@ router.post('/logout', authMiddleware, async (req: Request, res: Response): Prom
 router.post('/register', authMiddleware, async (req: Request, res: Response): Promise<void> => {
   const log = req.log || logger;
   try {
-    const { email, password, name } = req.body;
+    const { email: rawEmail, password: rawPassword, name } = req.body;
+    const email = typeof rawEmail === 'string' ? rawEmail.trim().toLowerCase() : '';
+    const password = typeof rawPassword === 'string' ? rawPassword.trim() : '';
 
     if (!email || !password || !name) {
       res.status(400).json({ success: false, error: 'Nome, email e senha são obrigatórios' });
